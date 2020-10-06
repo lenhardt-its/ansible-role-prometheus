@@ -1,0 +1,332 @@
+---
+- name: gather operating system variables
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower }}.yml"
+    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
+    - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
+    - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
+    - "{{ ansible_distribution | lower }}.yml"
+    - "{{ ansible_os_family | lower }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
+    - "{{ ansible_os_family | lower }}.yml"
+
+- name: assert usage of systemd as an init system
+  assert:
+    that: ansible_service_mgr == 'systemd'
+    msg: "This module only works with systemd"
+  become: true
+  tags: prometheus
+
+- name: get systemd version
+  command: systemctl --version
+  changed_when: false
+  check_mode: false
+  register: __systemd_version
+  become: true
+  tags: prometheus
+
+- name: set systemd version fact
+  set_fact:
+    prometheus_systemd_version: "{{ __systemd_version.stdout_lines[0].split(' ')[-1] }}"
+  become: true
+  tags: prometheus
+
+- name: create system group
+  group:
+    name: "{{ prometheus_system_group }}"
+    system: true
+    state: present
+  when: prometheus_system_group != "root"
+  become: true
+  tags: prometheus
+
+- name: create system user
+  user:
+    name: "{{ prometheus_system_user }}"
+    system: true
+    shell: "/sbin/nologin"
+    group: "{{ prometheus_system_group }}"
+    createhome: false
+  when: prometheus_system_user != "root"
+  become: true
+  tags: prometheus
+
+- name: create configuration and data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0755
+  with_items:
+    - "{{ prometheus_db_dir }}"
+    - "{{ prometheus_config_dir }}"
+    - "{{ prometheus_config_dir }}/rules"
+    - "{{ prometheus_config_dir }}/file_sd"
+  become: true
+  tags: prometheus
+
+- name: check if prometheus is installed
+  stat:
+    path: "{{ prometheus_binary_install_dir }}/prometheus"
+  register: __prometheus_is_installed
+  become: true
+  tags: prometheus
+
+- name: gather currently installed prometheus version (if any)
+  command: "{{ prometheus_binary_install_dir }}/prometheus --version"
+  args:
+    warn: false
+  changed_when: false
+  register: __prometheus_current_version_output
+  when: __prometheus_is_installed.stat.exists
+  become: true
+  tags: prometheus
+
+- block:
+  - name: get latest release
+    uri:
+      url: "https://api.github.com/repos/prometheus/prometheus/releases/latest"
+      method: GET
+      return_content: true
+      status_code: 200
+      body_format: json
+      validate_certs: false
+      user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+      password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+    environment: "{{ proxy_env }}"
+    no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+    register: _latest_release
+    until: _latest_release.status == 200
+    retries: 5
+    become: true
+    tags: prometheus
+
+  - name: "set prometheus version to {{ _latest_release.json.tag_name[1:] }}"
+    set_fact:
+      prometheus_version: "{{ _latest_release.json.tag_name[1:] }}"
+    become: true
+    tags: prometheus
+  when: prometheus_version == "latest"
+
+- block:
+  - name: get checksum list from github
+    set_fact:
+      _checksums: "{{ lookup('url', 'https://github.com/prometheus/prometheus/releases/download/v' + prometheus_version + '/sha256sums.txt', wantlist=True) | list }}"
+    environment: "{{ proxy_env }}"
+    run_once: true
+    become: true
+    tags: prometheus
+
+  - name: "get checksum for {{ go_arch }} architecture"
+    set_fact:
+      prometheus_checksum: "{{ item.split(' ')[0] }}"
+    with_items: "{{ _checksums }}"
+    when: "('linux-' + go_arch + '.tar.gz') in item"
+    become: true
+    tags: prometheus
+
+  - name: download binary to local folder
+    get_url:
+      url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+      dest: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+      checksum: "sha256:{{ prometheus_checksum }}"
+    environment: "{{ proxy_env }}"
+    register: _download_archive
+    until: _download_archive is succeeded
+    retries: 5
+    delay: 2
+    # run_once: true # <-- this cannot be set due to multi-arch support
+    delegate_to: localhost
+    check_mode: false
+    become: true
+    tags: prometheus
+
+  - name: unpack binaries
+    unarchive:
+      src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+      dest: "/tmp"
+      creates: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/prometheus"
+    delegate_to: localhost
+    check_mode: false
+    become: true
+    tags: prometheus
+
+  - name: propagate binaries
+    copy:
+      src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}"
+      dest: "{{ prometheus_binary_install_dir }}/{{ item }}"
+      mode: 0755
+      owner: root
+      group: root
+    with_items:
+      - prometheus
+      - promtool
+    notify: restart prometheus
+    become: true
+    tags: prometheus
+
+  - name: propagate console templates
+    copy:
+      src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}/"
+      dest: "{{ prometheus_config_dir }}/{{ item }}/"
+      mode: 0644
+      owner: "{{ prometheus_system_user }}"
+      group: "{{ prometheus_system_group }}"
+    with_items:
+      - console_libraries
+      - consoles
+    notify: restart prometheus
+    become: true
+    tags: prometheus
+  when: (not __prometheus_is_installed.stat.exists) or (__prometheus_current_version_output.stderr_lines[0].split(" ")[2] != prometheus_version)
+
+- name: get all file_sd files from scrape_configs
+  set_fact:
+    file_sd_files: "{{ prometheus_scrape_configs | json_query('[*][].file_sd_configs[*][].files[]') }}"
+  become: true
+  tags: prometheus
+
+- name: fail when file_sd targets are not defined in scrape_configs
+  fail:
+    msg: >
+      Oh, snap! `{{ item.key }}` couldn't be found in your scrape configs. Please ensure you provided
+      all targets from prometheus_targets in prometheus_scrape_configs
+  when: not prometheus_config_dir + "/file_sd/" + item.key + ".json" in file_sd_files
+  #  when: not item | basename | splitext | difference(['.yml']) | join('') in prometheus_targets.keys()
+  with_dict: "{{ prometheus_targets }}"
+  become: true
+  tags: prometheus
+
+- name: configure prometheus
+  template:
+    src: "prometheus.yml.j2"
+    dest: "{{ prometheus_config_dir }}/config.yml"
+    force: true
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0640
+    validate: "{{ prometheus_binary_install_dir }}/promtool check config %s"
+  notify: reload prometheus
+  become: true
+  tags: prometheus
+
+- name: configure prometheus alertrules files
+  template:
+    src: alertrules.j2
+    dest: "{{ prometheus_config_dir }}/rules/{{ item.name }}.rules"
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0644
+    validate: "{{ prometheus_binary_install_dir }}/promtool check rules %s"
+  with_items: "{{ prometheus_alert_rules }}"
+  when: prometheus_alert_rules != []
+  notify: reload prometheus
+  become: true
+  tags: prometheus
+
+- name: configure prometheus static targets
+  copy:
+    content: |
+      #jinja2: lstrip_blocks: True
+      {{ item.value | to_nice_json(indent=2) }}
+    dest: "{{ prometheus_config_dir }}/file_sd/static_{{ item.key }}.json"
+    force: true
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0644
+  with_dict: "{{ prometheus_targets }}"
+  when: prometheus_targets != {}
+  notify: reload prometheus
+  become: true
+  tags: prometheus
+
+- name: copy prometheus custom static targets
+  copy:
+    src: "{{ item }}"
+    dest: "{{ prometheus_config_dir }}/file_sd/"
+    force: true
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0640
+  with_fileglob: "{{ prometheus_static_targets_files }}"
+  become: true
+  tags: prometheus
+
+- name: copy consul-agent service json
+  template:
+    src: consul_agent_service.json.j2
+    dest: /etc/consul.d/prometheus.json
+    owner: consul
+    group: consul
+    mode: 0644
+  when: prometheus_create_consul_agent_service
+  notify: reload consul
+  become: true
+  tags: prometheus
+
+- name: create systemd service unit
+  template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart prometheus
+  become: true
+  tags: prometheus
+
+- name: install selinux dependencies
+  package:
+    name: "{{ item }}"
+    state: present
+  environment: "{{ proxy_env }}"
+  with_items: "{{ prometheus_selinux_packages }}"
+  register: _install_packages
+  until: _install_packages is succeeded
+  retries: 5
+  delay: 2
+  when:
+    - ansible_version.full is version_compare('2.4', '>=')
+    - ansible_selinux.status == "enabled"
+  become: true
+  tags: prometheus
+
+- name: allow binding to port in selinux
+  seport:
+    ports: "{{ prometheus_web_listen_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+  when:
+    - ansible_version.full is version_compare('2.4', '>=')
+    - ansible_selinux.status == "enabled"
+  become: true
+  tags: prometheus
+
+- name: allow access to port on firewalld
+  firewalld:
+    port: "{{ prometheus_web_listen_port }}/tcp"
+    permanent: yes
+    state: true
+  when: prometheus_firewalld_state == "enabled"
+  register: "_firewalld_prometheus_state"
+  become: true
+  tags: prometheus
+
+- name: reload firewalld service
+  service:
+    name: firewalld
+    state: reloaded
+  when: _firewalld_prometheus_state['changed']
+  become: true
+  tags: prometheus
+
+- name: ensure prometheus service is started and enabled
+  systemd:
+    daemon_reload: true
+    name: prometheus
+    state: started
+    enabled: true
+  become: true
+  tags: prometheus
