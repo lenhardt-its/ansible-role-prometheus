@@ -1,0 +1,27 @@
+groups:
+- name: consul_exporter
+  rules:
+  - alert: Consul agent is not healthy
+    expr: consul_health_node_status{instance=~"consul-.+", status="critical"} == 1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      title: Consul agent is down
+      description: Consul agent is not healthy on {{ $labels.node }}.
+  - alert: Consul cluster is degraded
+    expr: min(consul_raft_peers) < 2
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      title: Consul cluster is degraded
+      description: Consul cluster has {{ $value }} servers alive. This may lead to cluster break.
+  - alert: Consul cluster is not healthy
+    expr: consul_autopilot_healthy == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      title: Consul cluster is not healthy
+      description: Consul autopilot thinks that cluster is not healthy.

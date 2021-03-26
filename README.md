@@ -1,16 +1,23 @@
-# Ansible Role: prometheus
+# Ansible Role: Pprometheus
+
+[![ubuntu-18](https://img.shields.io/badge/ubuntu-18.x-orange?style=flat&logo=ubuntu)](https://ubuntu.com/)
+[![ubuntu-20](https://img.shields.io/badge/ubuntu-20.x-orange?style=flat&logo=ubuntu)](https://ubuntu.com/)
+[![debian-9](https://img.shields.io/badge/debian-9.x-orange?style=flat&logo=debian)](https://www.debian.org/)
+[![debian-10](https://img.shields.io/badge/debian-10.x-orange?style=flat&logo=debian)](https://www.debian.org/)
+[![centos-7](https://img.shields.io/badge/centos-7.x-orange?style=flat&logo=centos)](https://www.centos.org/)
+[![centos-8](https://img.shields.io/badge/centos-8.x-orange?style=flat&logo=centos)](https://www.centos.org/)
+[![License](https://img.shields.io/badge/license-MIT%20License-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
+[![GitHub issues](https://img.shields.io/github/issues/OnkelDom/ansible-role-proemtheus?style=flat)](https://github.com/OnkelDom/ansible-role-proemtheus/issues)
+[![GitHub tag](https://img.shields.io/github/tag/OnkelDom/ansible-role-proemtheus.svg?style=flat)](https://github.com/OnkelDom/ansible-role-proemtheus/tags)
 
 ## Description
 
 Deploy [Prometheus](https://github.com/prometheus/prometheus) monitoring system using ansible.
 
-### Upgradability notice
-
-When upgrading from <= 2.4.0 version of this role to >= 2.4.1 please turn off your prometheus instance. More in [2.4.1 release notes](https://github.com/cloudalchemy/ansible-prometheus/releases/tag/2.4.1)
-
 ## Requirements
 
-- Ansible >= 2.6 (It might work on previous versions, but we cannot guarantee it)
+- Ansible >= 2.9 (It might work on previous versions, but we cannot guarantee it)
+- Community Packages: `ansible-galaxy collection install community.general`
 
 ## Role Variables
 
@@ -26,7 +33,7 @@ All variables which can be overridden are stored in [defaults/main.yml](defaults
 | `prometheus_binary_install_dir` | /usr/local/bin | Path to directory with prometheus binaries |
 | `prometheus_system_user` | prometheus | Prometheus system user |
 | `prometheus_system_group` | prometheus | Prometheus system group |
-| `prometheus_firewalld_state` | disabled | Install and configure Firewalld and allow prometheus_web_listen_port (enabled/disabled) |
+| `prometheus_allow_firewall` | false | Install and configure Firewalld and allow prometheus_web_listen_port (enabled/disabled) |
 | `prometheus_web_listen_address` | "0.0.0.0" | Address on which prometheus will be listening |
 | `prometheus_web_listen_port` | "9090" | Port on which prometheus will be listening |
 | `prometheus_web_external_url` | "http://localhost:{{ prometheus_web_listen_port }}" | External address on which prometheus is available. Useful when behind reverse proxy. Ex. `http://example.org/prometheus` |
@@ -40,11 +47,12 @@ All variables which can be overridden are stored in [defaults/main.yml](defaults
 | `prometheus_remote_write` | [] | Remote write. Compatible with [official configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#<remote_write>) |
 | `prometheus_remote_read` | [] | Remote read. Compatible with [official configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#<remote_read>) |
 | `prometheus_external_labels` | environment: "{{ ansible_fqdn \| default(ansible_host) \| default(inventory_hostname) }}" | Provide map of additional labels which will be added to any time series or alerts when communicating with external systems |
-| `prometheus_targets` | {} | Targets which will be scraped. Better example is provided in our [demo site](https://github.com/cloudalchemy/demo-site/blob/2a8a56fc10ce613d8b08dc8623230dace6704f9a/group_vars/all/vars#L8) |
-| `prometheus_scrape_configs` | [defaults/main.yml#L58](https://github.com/cloudalchemy/ansible-prometheus/blob/ff7830d06ba57be1177f2b6fca33a4dd2d97dc20/defaults/main.yml#L47) | Prometheus scrape jobs provided in same format as in [official docs](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) |
+| `prometheus_targets` | {} | Targets which will be scraped |
+| `prometheus_scrape_configs` | [defaults/main.yml#L58](defaults/main.yml#L58) | Prometheus scrape jobs provided in same format as in [official docs](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) |
 | `prometheus_config_file` | "prometheus.yml.j2" | Variable used to provide custom prometheus configuration file in form of ansible template |
-| `prometheus_alert_rules_files` | [defaults/main.yml#L79](https://github.com/cloudalchemy/ansible-prometheus/blob/73d6df05a775ee5b736ac8f28d5605f2a975d50a/defaults/main.yml#L78) | List of folders were ansible will look for files containing alerting rules which will be copied to `{{ prometheus_config_dir }}/rules/`. Files must have `*.rules` extension |
-| `prometheus_targets` | [defaults/main.yml#L61](https://github.com/cloudalchemy/ansible-prometheus/blob/73d6df05a775ee5b736ac8f28d5605f2a975d50a/defaults/main.yml#L81) | List of folders were ansible will look for files containing custom static target configuration files which will be copied to `{{ prometheus_config_dir }}/file_sd/`. |
+| `prometheus_alert_rules_files` | [defaults/main.yml#L79](defaults/main.yml#L79) | List of folders were ansible will look for files containing alerting rules which will be copied to `{{ prometheus_config_dir }}/rules/`. Files must have `*.rules` extension |
+| `prometheus_targets` | [defaults/main.yml#L61](defaults/main.yml) | List of folders were ansible will look for files containing custom static target configuration files which will be copied to `{{ prometheus_config_dir }}/file_sd/`. |
+| `prometheus_alertrules_files` | [defaults/main.yml#L82](defaults/main.yml#L82) | list of alert rule files stored in files folder |
 
 
 ### Relation between `prometheus_scrape_configs` and `prometheus_targets`
@@ -96,7 +104,7 @@ prometheus_scrape_configs:
 ---
 - hosts: all
   roles:
-  - ansible-role-prometheus
+  - onkeldom.prometheus
   vars:
     prometheus_targets:
       node:

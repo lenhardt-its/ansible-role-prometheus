@@ -1,0 +1,35 @@
+groups:
+- name: mysqld_exporter
+  rules:
+  - alert: MysqlDown
+    expr: mysql_up == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "MySQL down (instance {{ $labels.instance }})"
+      description: "MySQL instance is down on {{ $labels.instance }}\n  VALUE = {{ $value }}"
+  - alert: MysqlTooManyConnections
+    expr: (mysql_global_status_threads_connected / mysql_global_variables_max_connections) * 100 > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL too many connections (instance {{ $labels.instance }})"
+      description: "More than 80% of MySQL connections are in use on {{ $labels.instance }}\n  VALUE = {{ $value }}"
+  - alert: MysqlSlowQueries
+    expr: mysql_global_status_slow_queries > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL slow queries (instance {{ $labels.instance }})"
+      description: "MySQL server is having some slow queries.\n  VALUE = {{ $value }}"
+  - alert: MysqlRestarted
+    expr: mysql_global_status_uptime < 60
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "MySQL restarted (instance {{ $labels.instance }})"
+      description: "MySQL has just been restarted, less than one minute ago on {{ $labels.instance }}.\n  VALUE = {{ $value }}"

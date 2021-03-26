@@ -1,0 +1,114 @@
+groups:
+- name: haproxy_exporter
+  rules:
+  - alert: Haproxy Exporter Down
+    expr: haproxy_up == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy Exporter Down (instance {{ $labels.instance }})"
+  - alert: HaproxyHighHttp4xxErrorRateBackend
+    expr: (irate(haproxy_server_http_responses_total{code="4xx",hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) / (irate(haproxy_server_http_responses_total{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) * 100 > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy high HTTP 4xx error rate backend (instance {{ $labels.instance }})"
+      description: "Too many HTTP requests with status 4xx (> 5%) on backend {{ $labels.fqdn }}/{{ $labels.backend }}\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyHighHttp4xxErrorRateServer
+    expr: (irate(haproxy_server_http_responses_total{code="4xx",hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) / (irate(haproxy_server_http_responses_total{}[5m])) * 100 > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy high HTTP 4xx error rate server (instance {{ $labels.instance }})"
+      description: "Too many HTTP requests with status 4xx (> 5%) on server {{ $labels.server }}\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyHighHttp5xxErrorRateServer
+    expr: (irate(haproxy_server_http_responses_total{code="5xx",hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) / (irate(haproxy_server_http_responses_total{}[5m])) * 100 > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy high HTTP 5xx error rate server (instance {{ $labels.instance }})"
+      description: "Too many HTTP requests with status 5xx (> 5%) on server {{ $labels.server }}\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyBackendConnectionErrors
+    expr: (rate(haproxy_backend_connection_errors_total{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) * 100 > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy backend connection errors (instance {{ $labels.instance }})"
+      description: "Too many connection errors to {{ $labels.fqdn }}/{{ $labels.backend }} backend (> 5%). Request throughput may be to high.\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyServerResponseErrors
+    expr: (rate(haproxy_server_response_errors_total{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) * 100 > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy server response errors (instance {{ $labels.instance }})"
+      description: "Too many response errors to {{ $labels.server }} server (> 5%).\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyServerConnectionErrors
+    expr: (rate(haproxy_server_connection_errors_total{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}[5m])) * 100 > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy server connection errors (instance {{ $labels.instance }})"
+      description: "Too many connection errors to {{ $labels.server }} server (> 5%). Request throughput may be to high.\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyBackendMaxActiveSession
+    expr: ((haproxy_server_max_sessions{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}) / (haproxy_server_limit_sessions{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"})) * 100 > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "HAProxy backend max active session (instance {{ $labels.instance }})"
+      description: "HAproxy backend {{ $labels.fqdn }}/{{ $labels.backend }} is reaching session limit (> 80%).\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyPendingRequests
+    expr: (haproxy_backend_current_queue{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "HAProxy pending requests (instance {{ $labels.instance }})"
+      description: "Some HAProxy requests are pending on {{ $labels.fqdn }}/{{ $labels.backend }} backend\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyHttpSlowingDown
+    expr: (haproxy_backend_http_total_time_average_seconds{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}) > 2
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "HAProxy HTTP slowing down (instance {{ $labels.instance }})"
+      description: "Average request time is increasing\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyRetryHigh
+    expr: (haproxy_backend_retry_warnings_total{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}) > 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "HAProxy retry high (instance {{ $labels.instance }})"
+      description: "High rate of retry on {{ $labels.fqdn }}/{{ $labels.backend }} backend\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyBackendDown
+    expr: haproxy_backend_up{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"} == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy backend down (instance {{ $labels.instance }})"
+      description: "HAProxy backend is down\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyServerDown
+    expr: haproxy_server_up{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"} == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "HAProxy server down (instance {{ $labels.instance }})"
+      description: "HAProxy server is down\n  VALUE = {{ $value }}\n"
+  - alert: HaproxyFrontendSecurityBlockedRequests
+    expr: (haproxy_frontend_requests_denied_total{hostname=~"proxylb.+|serviceproxy.+|.+.mon.dvag.net"}) > 500
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "HAProxy frontend security blocked requests (instance {{ $labels.instance }})"
+      description: "HAProxy is blocking requests for security reason\n  VALUE = {{ $value }}\n"

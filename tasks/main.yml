@@ -253,17 +253,19 @@
   become: true
   tags: prometheus
 
-- name: copy consul-agent service json
-  template:
-    src: consul_agent_service.json.j2
-    dest: /etc/consul.d/prometheus.json
-    owner: consul
-    group: consul
+- name: copy prometheus alert rules files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ prometheus_config_dir }}/rules/{{ item }}"
     mode: 0644
-  when: prometheus_create_consul_agent_service
-  notify: reload consul
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+  with_items: "{{ prometheus_alertrules_files }}"
+  notify: reload prometheus
   become: true
-  tags: prometheus
+  tags: 
+    - prometheus
+    - prometheus_alertfiles
 
 - name: create systemd service unit
   template:
@@ -273,22 +275,6 @@
     group: root
     mode: 0644
   notify: restart prometheus
-  become: true
-  tags: prometheus
-
-- name: install selinux dependencies
-  package:
-    name: "{{ item }}"
-    state: present
-  environment: "{{ proxy_env }}"
-  with_items: "{{ prometheus_selinux_packages }}"
-  register: _install_packages
-  until: _install_packages is succeeded
-  retries: 5
-  delay: 2
-  when:
-    - ansible_version.full is version_compare('2.4', '>=')
-    - ansible_selinux.status == "enabled"
   become: true
   tags: prometheus
 
@@ -304,21 +290,64 @@
   become: true
   tags: prometheus
 
-- name: allow access to port on firewalld
+- name: check whether ufw status is active
+  command: "ufw status"
+  changed_when: False
+  ignore_errors: True
+  register: _ufw_status
+  become: true
+  when:
+    - prometheus_allow_firewall
+    - ansible_os_family == 'Debian'
+  tags: prometheus
+
+- name: configure ufw
+  community.general.ufw:
+    rule: allow
+    port: "{{ prometheus_web_listen_port }}"
+    proto: tcp
+    state: enabled
+    comment: "Prometheus"
+  notify: reload ufw
+  become: true
+  tags: prometheus
+  register: "_firewalld_prometheus_state"
+  when:
+    - "'active' in _ufw_status.stdout"
+    - ansible_os_family == 'Debian'
+    - prometheus_allow_firewall
+
+- name: reload ufw
+  systemd:
+    name: ufw
+    state: reloaded
+  when:
+    - _firewalld_prometheus_state['changed']
+    - ansible_os_family == 'Debian'
+    - prometheus_allow_firewall
+  become: true
+  tags: prometheus
+
+- name: configure firewalld
   firewalld:
     port: "{{ prometheus_web_listen_port }}/tcp"
     permanent: yes
     state: true
-  when: prometheus_firewalld_state == "enabled"
+  when:
+    - prometheus_allow_firewall
+    - ansible_os_family == 'RedHat'
   register: "_firewalld_prometheus_state"
   become: true
   tags: prometheus
 
-- name: reload firewalld service
-  service:
+- name: reload firewalld
+  systemd:
     name: firewalld
     state: reloaded
-  when: _firewalld_prometheus_state['changed']
+  when:
+    - prometheus_allow_firewall
+    - _firewalld_prometheus_state['changed']
+    - - ansible_os_family == 'RedHat'
   become: true
   tags: prometheus
 

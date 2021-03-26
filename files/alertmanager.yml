@@ -1,0 +1,23 @@
+groups:
+- name: alertmanager
+  rules:
+  - alert: AlertmanagerConfigurationReload
+    annotations:
+      description: "AlertManager configuration reload error"
+      summary: AlertManager configuration reload (instance {{ $labels.instance }})
+    expr: alertmanager_config_last_reload_successful != 1
+    for: 5m
+    labels:
+      severity: warning
+  - alert: AlertmanagerNotificationsFailing
+    expr: >
+      sum by (integration) (
+        rate(alertmanager_notifications_failed_total[2m])
+      ) > 0
+    for: 20m
+    labels:
+      severity: warning
+    annotations:
+      summary: Alertmanager is failing sending notifications
+      runbook: docs/monitoring/alertmanager-notification-failures.md
+      description: Alertmanager is seeing errors for the {{$labels.integration}} integration.

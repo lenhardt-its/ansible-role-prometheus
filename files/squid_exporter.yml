@@ -1,0 +1,26 @@
+groups:
+- name: squid_exporter
+  rules:
+  - alert: SquidExporterTooHighErrorRate
+    expr: 100 * (squid_client_http_errors_total / squid_client_http_requests_total) > 40
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Squid Exporter on Host (instance {{ $labels.instance }}) too high error rate"
+      description: "Too high error rate\n  VALUE = {{ $value }}"
+  - alert: SquidUp
+    expr: squid_up == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Squid Exporter on Host (instance {{ $labels.instance }}) is down"
+  - alert: Squid Error Rate
+    expr: squid_client_http_errors_total{} / squid_client_http_requests_total{} * 100 > 30
+    for: 5m
+    labels:
+      severity: standard
+    annotations:
+      summary: "Squid Error Rate to high on Host (instance {{ $labels.instance }})"
+      value: "{{ $value }}"

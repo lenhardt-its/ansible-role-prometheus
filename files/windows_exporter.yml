@@ -1,0 +1,79 @@
+groups:
+- name: windows_exporter
+  rules:
+  - alert: WindowsServerCollectorError
+    expr: windows_exporter_collector_success == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Windows Server collector Error (instance {{ $labels.instance }})"
+      description: "Collector {{ $labels.collector }} was not successful\n  VALUE = {{ $value }}"
+  - alert: Windows Server Disk Space Usage
+    expr: 100 - 100 * ((windows_logical_disk_free_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024 ) / (windows_logical_disk_size_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024)) > 95
+    for: 5m
+    labels:
+      scc: yes
+      severity: critical
+    annotations:
+      summary: "Windows Server disk Space Usage (instance {{ $labels.instance }})"
+      description: "Disk usage is more than 95%\n  VALUE = {{ $value }}"
+  - alert: Windows Server Disk Space Usage
+    expr: 100 - 100 * ((windows_logical_disk_free_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024 ) / (windows_logical_disk_size_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024)) > 90
+    for: 5m
+    labels:
+      scc: no
+      severity: warning
+    annotations:
+      summary: "Windows Server disk Space Usage (instance {{ $labels.instance }})"
+      description: "Disk usage is more than 95%\n  VALUE = {{ $value }}"
+  - alert: Windows Server Reboot
+    expr: changes(windows_system_system_up_time[1h])  >  1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Windows Server (instance {{ $labels.instance }}) wurde neugestartet"
+  - alert: Windows_app_mbamstatus
+    expr: dvag_app_mbamstatus == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Windows App Mbamstatus down (instance {{ $labels.instance }})"
+  - alert: Windows Server Exporter Status
+    expr:  up{job="windows_exporter"} == 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Service Windows Exporter down (instance {{ $labels.instance }})"
+  - alert: WindowsServerServiceState
+    expr: windows_service_state{state="running",name!~"tooliciousxmlinterface|dnscache|veeamvsssupport|iaasvmprovider|onesyncsvc|shellhwdetection|wbioSrvc|wuauserv|cdpsvc|winhttpautoproxysvc|shellhwdetection|edgeupdate|windefend|trustedinstaller|clr_optimization|tiledatamodelsvc|gupdate|diagtrack|gpsvc|sppsvcmmcss|wbiosrvc|remoteregistry|sppsvc|ualsvc|audiosrv|devfleetmgmt_server|mapsbroker|silklauncherservice|netmsmqactivator|bits|ui0detect|nettcpactivator"} != 1
+    labels:
+      severity: warning
+    annotations:
+      summary: "Service {{ $labels.name }} on {{ $labels.instance }} down"
+  - alert: Windows Server Service State Standard
+    expr: windows_service_state{state="running",name=~"consul|windows_exporter"} != 1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Service {{ $labels.name }} on {{ $labels.instance }} down"
+  - alert: WindowsServerCpuUsage
+    expr: 100 - (rate(windows_cpu_time_total{mode="idle"}[2m])) * 100 > 90
+    for: 60m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Windows Server CPU Usage on host (instance {{ $labels.instance }}) is {{ $value }}"
+      description: "CPU Usage is more than 90%"
+  - alert: Windows Server Memory Usage
+    expr: windows_os_physical_memory_free_bytes / windows_cs_physical_memory_bytes * 100 < 5
+    for: 60m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Windows Server memory Usage on Host (instance {{ $labels.instance }}) is over {{ $value }}"
+      description: "Memory usage is more than 95%"

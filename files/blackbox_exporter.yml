@@ -1,0 +1,59 @@
+groups:
+- name: blackbox_exporter
+  rules:
+  - alert: EndpunktCheckFailed
+    expr: probe_success == 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Endpunkt Check failed (instance {{ $labels.instance }})"
+      description: "Endpunkt Check failed\n  VALUE = {{ $value }}"
+  - alert: EndpunktCheckSlow
+    expr: avg_over_time(probe_duration_seconds[1m]) > 5
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Slow Endpunkt Check (instance {{ $labels.instance }})"
+      description: "Blackbox probe took more than 5s to complete\n  VALUE = {{ $value }}"
+  - alert: SslCertificateWillExpireSoon
+    expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "SSL certificate will expire soon (instance {{ $labels.instance }})"
+      description: "SSL certificate expires in 30 days\n  VALUE = {{ $value }}"
+  - alert: BlackboxSslCertificateWillExpireSoon
+    expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 3
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Blackbox SSL certificate will expire soon (instance {{ $labels.instance }})"
+      description: "SSL certificate expires in 3 days\n  VALUE = {{ $value }}"
+  - alert: SslCertificateExpired
+    expr: probe_ssl_earliest_cert_expiry - time()  <= 0
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "SSL certificate expired (instance {{ $labels.instance }})"
+      description: "SSL certificate has expired already\n  VALUE = {{ $value }}"
+  - alert: HttpSlowRequests
+    expr: avg_over_time(probe_http_duration_seconds[1m]) > 1
+    for: 60m
+    labels:
+      severity: error
+    annotations:
+      summary: "HTTP slow requests (instance {{ $labels.instance }})"
+      description: "HTTP request took more than 1s\n  VALUE = {{ $value }}"
+  - alert: SlowPing
+    expr: avg_over_time(probe_icmp_duration_seconds[1m]) > 3
+    for: 60m
+    labels:
+      severity: error
+    annotations:
+      summary: "Slow ping (instance {{ $labels.instance }})"
+      description: "Blackbox ping took more than VALUE = {{ $value }}"
