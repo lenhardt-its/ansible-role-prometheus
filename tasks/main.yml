@@ -253,6 +253,13 @@
   become: true
   tags: prometheus
 
+- name: enable capabilities to ports lower than port 1024
+  capabilities:
+    path: "{{ prometheus_binary_install_dir }}/prometheus"
+    capability: CAP_NET_BIND_SERVICE+ep
+    state: present
+  when: prometheus_web_listen_port <= 1024
+
 - name: copy prometheus alert rules files
   copy:
     src: "{{ item }}"
