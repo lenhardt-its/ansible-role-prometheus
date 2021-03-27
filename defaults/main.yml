@@ -98,4 +98,3 @@ prometheus_alertrules_files:
   - vmware_exporter.yml
 
 prometheus_alert_rules: []
-
