@@ -14,9 +14,16 @@
   become: true
   tags: prometheus
 
-- name: reload consul
+- name: reload ufw
   systemd:
-    name: consul
+    name: ufw
     state: reloaded
-  become: true
   tags: prometheus
+  become: true
+
+- name: reload firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+  tags: prometheus
+  become: true
