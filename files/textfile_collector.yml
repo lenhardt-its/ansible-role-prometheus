@@ -1,0 +1,21 @@
+groups:
+- name: textfile_collector
+  rules:
+  - alert: Local Mailqueue
+    expr: node_size_mailqueue_bytes > 1
+    for: 3m
+    annotations:
+      summary: LocalMailQueue (instance {{ $labels.instance }})
+      description: "Local MailQueue is stuck\n  VALUE = {{ $value }}"
+  - alert: Filesystem Mount
+    expr: node_filesystem_mount == 1
+    for: 3m
+    annotations:
+      summary: "FilesystemMount (instance {{ $labels.instance }} down"
+      description: "Filesystem Mount\n  VALUE = {{ $value }}"
+  - alert: Node reboot required
+    expr: node_reboot_required == 1
+    for: 3m
+    annotations:
+      summary: "System reboot required for {{ $labels.instance }}"
+      description: "The node {{ $labels.instance }} must be restarted after apt-get updates"

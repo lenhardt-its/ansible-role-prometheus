@@ -1,0 +1,16 @@
+### File managed by Puppet
+groups:
+- name: adguard_exporter
+  rules:
+  - alert: ADguard service not running
+    expr: adguard_running == 0
+    for: 3m
+    annotations:
+      summary: "ADguard DNS not Running (instance {{ $labels.instance }})"
+      description: "ADguard DNS not Running\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+  - alert: ADguard protection not enabled
+    expr: adguard_running == 0 and adguard_protection_enabled == 0
+    for: 3m
+    annotations:
+      summary: "ADguard DNS protection not enabled (instance {{ $labels.instance }})"
+      description: "ADguard DNS protection not enabled\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
