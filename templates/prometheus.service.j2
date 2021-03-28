@@ -21,6 +21,7 @@ ExecStart={{ prometheus_binary_install_dir }}/prometheus \
   --log.level={{ prometheus_log_level }} \
   --log.format={{ prometheus_log_format }}{% for flag, flag_value in prometheus_config_flags_extra.items() %} \
   --{{ flag }}={{ flag_value }}{% endfor %}
+
 LimitNOFILE=65000
 {% if prometheus_systemd_version | int >= 231 %}
 ReadWritePaths={{ prometheus_db_dir }}
