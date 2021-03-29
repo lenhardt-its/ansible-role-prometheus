@@ -55,7 +55,7 @@ prometheus_external_labels:
   environment: "{{ ansible_fqdn | default(ansible_host) | default(inventory_hostname) }}"
 
 prometheus_alert_rules_files:
-  - prometheus/rules/*.rules
+  - prometheus/rules/*.yml
 
 prometheus_static_targets_files:
   - prometheus/targets/*.yml
