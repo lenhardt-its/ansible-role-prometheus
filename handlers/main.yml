@@ -13,17 +13,3 @@
     state: reloaded
   become: true
   tags: prometheus
-
-- name: reload ufw
-  systemd:
-    name: ufw
-    state: reloaded
-  tags: prometheus
-  become: true
-
-- name: reload firewalld
-  systemd:
-    name: firewalld
-    state: reloaded
-  tags: prometheus
-  become: true

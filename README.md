@@ -19,7 +19,6 @@ Deploy [Prometheus](https://github.com/prometheus/prometheus) monitoring system 
 ## Requirements
 
 - Ansible >= 2.9 (It might work on previous versions, but we cannot guarantee it)
-- Community Packages: `ansible-galaxy collection install community.general`
 
 ## Role Variables
 
@@ -35,7 +34,7 @@ All variables which can be overridden are stored in [defaults/main.yml](defaults
 | `prometheus_binary_install_dir` | /usr/local/bin | Path to directory with prometheus binaries |
 | `prometheus_system_user` | prometheus | Prometheus system user |
 | `prometheus_system_group` | prometheus | Prometheus system group |
-| `prometheus_allow_firewall` | false | Install and configure Firewalld and allow prometheus_web_listen_port (enabled/disabled) |
+| `prometheus_limit_nofile` | 65000 | nofile limit in systemd unit |
 | `prometheus_web_listen_address` | "0.0.0.0" | Address on which prometheus will be listening |
 | `prometheus_web_listen_port` | "9090" | Port on which prometheus will be listening |
 | `prometheus_web_external_url` | "http://localhost:{{ prometheus_web_listen_port }}" | External address on which prometheus is available. Useful when behind reverse proxy. Ex. `http://example.org/prometheus` |
@@ -74,7 +73,7 @@ All this mean that you CAN use custom `prometheus_scrape_configs` with `promethe
 #### Example
 
 Lets look at our default configuration, which shows all features. By default we have this `prometheus_targets`:
-```
+```yml
 prometheus_targets:
   node:  # This is a base file name. File is located in "{{ prometheus_config_dir }}/file_sd/<<BASENAME>>.yml"
     - targets:              #
@@ -85,7 +84,7 @@ prometheus_targets:
 Such config will result in creating one file named `node.yml` in `{{ prometheus_config_dir }}/file_sd` directory.
 
 Next this file needs to be loaded into scrape config. Here is modified version of our default `prometheus_scrape_configs`:
-```
+```yml
 prometheus_scrape_configs:
   - job_name: "prometheus"    # Custom scrape job, here using `static_config`
     metrics_path: "/metrics"

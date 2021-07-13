@@ -1,36 +1,4 @@
 ---
-- name: gather operating system variables
-  include_vars: "{{ item }}"
-  with_first_found:
-    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower }}.yml"
-    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-    - "{{ ansible_distribution_file_variety | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-    - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower }}.yml"
-    - "{{ ansible_distribution | lower }}.yml"
-    - "{{ ansible_os_family | lower }}-{{ ansible_distribution_version.split('.')[0] }}.yml"
-    - "{{ ansible_os_family | lower }}.yml"
-
-- name: assert usage of systemd as an init system
-  assert:
-    that: ansible_service_mgr == 'systemd'
-    msg: "This module only works with systemd"
-  become: true
-  tags: prometheus
-
-- name: get systemd version
-  command: systemctl --version
-  changed_when: false
-  check_mode: false
-  register: __systemd_version
-  become: true
-  tags: prometheus
-
-- name: set systemd version fact
-  set_fact:
-    prometheus_systemd_version: "{{ __systemd_version.stdout_lines[0].split(' ')[-1] }}"
-  become: true
-  tags: prometheus
-
 - name: create system group
   group:
     name: "{{ prometheus_system_group }}"
@@ -83,122 +51,78 @@
   become: true
   tags: prometheus
 
-- block:
-  - name: get latest release
-    uri:
-      url: "https://api.github.com/repos/prometheus/prometheus/releases/latest"
-      method: GET
-      return_content: true
-      status_code: 200
-      body_format: json
-      validate_certs: false
-      user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
-      password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
-    environment: "{{ proxy_env }}"
-    no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
-    register: _latest_release
-    until: _latest_release.status == 200
-    retries: 5
-    become: true
-    tags: prometheus
-
-  - name: "set prometheus version to {{ _latest_release.json.tag_name[1:] }}"
-    set_fact:
-      prometheus_version: "{{ _latest_release.json.tag_name[1:] }}"
-    become: true
-    tags: prometheus
-  when: prometheus_version == "latest"
-
-- block:
-  - name: get checksum list from github
-    set_fact:
-      _checksums: "{{ lookup('url', 'https://github.com/prometheus/prometheus/releases/download/v' + prometheus_version + '/sha256sums.txt', wantlist=True) | list }}"
-    environment: "{{ proxy_env }}"
-    run_once: true
-    become: true
-    tags: prometheus
-
-  - name: "get checksum for {{ go_arch }} architecture"
-    set_fact:
-      prometheus_checksum: "{{ item.split(' ')[0] }}"
-    with_items: "{{ _checksums }}"
-    when: "('linux-' + go_arch + '.tar.gz') in item"
-    become: true
-    tags: prometheus
-
-  - name: download binary to local folder
-    get_url:
-      url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
-      dest: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
-      checksum: "sha256:{{ prometheus_checksum }}"
-    environment: "{{ proxy_env }}"
-    register: _download_archive
-    until: _download_archive is succeeded
-    retries: 5
-    delay: 2
-    # run_once: true # <-- this cannot be set due to multi-arch support
-    delegate_to: localhost
-    check_mode: false
-    become: true
-    tags: prometheus
-
-  - name: unpack binaries
-    unarchive:
-      src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
-      dest: "/tmp"
-      creates: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/prometheus"
-    delegate_to: localhost
-    check_mode: false
-    become: true
-    tags: prometheus
-
-  - name: propagate binaries
-    copy:
-      src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}"
-      dest: "{{ prometheus_binary_install_dir }}/{{ item }}"
-      mode: 0755
-      owner: root
-      group: root
-    with_items:
-      - prometheus
-      - promtool
-    notify: restart prometheus
-    become: true
-    tags: prometheus
-
-  - name: propagate console templates
-    copy:
-      src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}/"
-      dest: "{{ prometheus_config_dir }}/{{ item }}/"
-      mode: 0644
-      owner: "{{ prometheus_system_user }}"
-      group: "{{ prometheus_system_group }}"
-    with_items:
-      - console_libraries
-      - consoles
-    notify: restart prometheus
-    become: true
-    tags: prometheus
+- name: download binary to local folder
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+    dest: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+  environment: "{{ proxy_env }}"
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+  # run_once: true # <-- this cannot be set due to multi-arch support
+  delegate_to: localhost
+  check_mode: false
+  become: true
+  tags: prometheus
   when: (not __prometheus_is_installed.stat.exists) or (__prometheus_current_version_output.stdout_lines[0].split(" ")[2] != prometheus_version)
 
-- name: get all file_sd files from scrape_configs
-  set_fact:
-    file_sd_files: "{{ prometheus_scrape_configs | json_query('[*][].file_sd_configs[*][].files[]') }}"
+- name: unpack binaries
+  unarchive:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}.tar.gz"
+    dest: "/tmp"
+    creates: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/prometheus"
+  delegate_to: localhost
+  check_mode: false
   become: true
   tags: prometheus
-
-- name: fail when file_sd targets are not defined in scrape_configs
-  fail:
-    msg: >
-      Oh, snap! `{{ item.key }}` couldn't be found in your scrape configs. Please ensure you provided
-      all targets from prometheus_targets in prometheus_scrape_configs
-  when: not prometheus_config_dir + "/file_sd/" + item.key + ".json" in file_sd_files
-  #  when: not item | basename | splitext | difference(['.yml']) | join('') in prometheus_targets.keys()
-  with_dict: "{{ prometheus_targets }}"
+  when: (not __prometheus_is_installed.stat.exists) or (__prometheus_current_version_output.stdout_lines[0].split(" ")[2] != prometheus_version)
+  
+- name: propagate binaries
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}"
+    dest: "{{ prometheus_binary_install_dir }}/{{ item }}"
+    mode: 0755
+    owner: root
+    group: root
+  with_items:
+    - prometheus
+    - promtool
+  notify: restart prometheus
   become: true
   tags: prometheus
+  when: (not __prometheus_is_installed.stat.exists) or (__prometheus_current_version_output.stdout_lines[0].split(" ")[2] != prometheus_version)
 
-- name: configure prometheus
+- name: propagate console templates
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ go_arch }}/{{ item }}/"
+    dest: "{{ prometheus_config_dir }}/{{ item }}/"
+    mode: 0644
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+  with_items:
+    - console_libraries
+    - consoles
+  notify: restart prometheus
+  become: true
+  tags: prometheus
+  when: (not __prometheus_is_installed.stat.exists) or (__prometheus_current_version_output.stdout_lines[0].split(" ")[2] != prometheus_version)
+
+- name: copy alert rules files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ prometheus_config_dir }}/rules/{{ item }}"
+    mode: 0644
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+  with_items: "{{ prometheus_alertrules_files }}"
+  notify: reload prometheus
+  become: true
+  tags: 
+    - prometheus
+    - alertfiles
+
+- name: configure
   template:
     src: "prometheus.yml.j2"
     dest: "{{ prometheus_config_dir }}/config.yml"
@@ -209,23 +133,11 @@
     validate: "{{ prometheus_binary_install_dir }}/promtool check config %s"
   notify: reload prometheus
   become: true
-  tags: prometheus
+  tags: 
+    - prometheus
+    - prometheus_config
 
-- name: configure prometheus alertrules files
-  template:
-    src: alertrules.j2
-    dest: "{{ prometheus_config_dir }}/rules/{{ item.name }}.yml"
-    owner: "{{ prometheus_system_user }}"
-    group: "{{ prometheus_system_group }}"
-    mode: 0644
-    validate: "{{ prometheus_binary_install_dir }}/promtool check rules %s"
-  with_items: "{{ prometheus_alert_rules }}"
-  when: prometheus_alert_rules != []
-  notify: reload prometheus
-  become: true
-  tags: prometheus
-
-- name: configure prometheus static targets
+- name: configure static targets
   copy:
     content: |
       #jinja2: lstrip_blocks: True
@@ -241,7 +153,7 @@
   become: true
   tags: prometheus
 
-- name: copy prometheus custom static targets
+- name: copy custom static targets
   copy:
     src: "{{ item }}"
     dest: "{{ prometheus_config_dir }}/file_sd/"
@@ -252,28 +164,6 @@
   with_fileglob: "{{ prometheus_static_targets_files }}"
   become: true
   tags: prometheus
-
-- name: enable capabilities to ports lower than port 1024
-  capabilities:
-    path: "{{ prometheus_binary_install_dir }}/prometheus"
-    capability: CAP_NET_BIND_SERVICE+ep
-    state: present
-  when: prometheus_web_listen_port <= 1024
-  tags: prometheus
-
-- name: copy prometheus alert rules files
-  copy:
-    src: "{{ item }}"
-    dest: "{{ prometheus_config_dir }}/rules/{{ item }}"
-    mode: 0644
-    owner: "{{ prometheus_system_user }}"
-    group: "{{ prometheus_system_group }}"
-  with_items: "{{ prometheus_alertrules_files }}"
-  notify: reload prometheus
-  become: true
-  tags: 
-    - prometheus
-    - prometheus_alertfiles
 
 - name: create systemd service unit
   template:
@@ -286,75 +176,10 @@
   become: true
   tags: prometheus
 
-- name: allow binding to port in selinux
-  seport:
-    ports: "{{ prometheus_web_listen_port }}"
-    proto: tcp
-    setype: http_port_t
-    state: present
-  when:
-    - ansible_version.full is version_compare('2.4', '>=')
-    - ansible_selinux.status == "enabled"
-  become: true
-  tags: prometheus
-
-- name: check whether ufw status is active
-  command: "ufw status"
-  changed_when: False
-  ignore_errors: True
-  register: _ufw_status
-  become: true
-  when:
-    - prometheus_allow_firewall
-    - ansible_os_family == 'Debian'
-  tags: prometheus
-
-- name: check whether firewalld status is active
-  command: "firewall-cmd --state"
-  changed_when: False
-  ignore_errors: True
-  register: _firewalld_status
-  become: true
-  when: ansible_os_family == 'RedHat'
-  tags: prometheus
-
-- name: configure ufw
-  community.general.ufw:
-    rule: allow
-    port: "{{ prometheus_web_listen_port }}"
-    proto: tcp
-    state: enabled
-    comment: "Prometheus"
-  changed_when: False
-  ignore_errors: True
-  notify: reload ufw
-  become: true
-  tags: prometheus
-  when:
-    - "'active' in _ufw_status.stdout"
-    - ansible_os_family == 'Debian'
-    - prometheus_allow_firewall
-
-- name: configure firewalld
-  firewalld:
-    port: "{{ prometheus_web_listen_port }}/tcp"
-    permanent: yes
-    state: true
-  changed_when: False
-  ignore_errors: True
-  when:
-    - "'running' in _firewalld_status.stdout"
-    - prometheus_allow_firewall
-    - ansible_os_family == 'RedHat'
-  notify: reload firewalld
-  become: true
-  tags: prometheus
-
-- name: ensure prometheus service is started and enabled
+- name: ensure service is started and enabled
   systemd:
-    daemon_reload: true
     name: prometheus
-    state: started
-    enabled: true
+    state: reloaded
+    enabled: yes
   become: true
   tags: prometheus

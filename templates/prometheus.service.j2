@@ -22,26 +22,15 @@ ExecStart={{ prometheus_binary_install_dir }}/prometheus \
   --log.format={{ prometheus_log_format }}{% for flag, flag_value in prometheus_config_flags_extra.items() %} \
   --{{ flag }}={{ flag_value }}{% endfor %}
 
-LimitNOFILE=65000
-{% if prometheus_systemd_version | int >= 231 %}
-ReadWritePaths={{ prometheus_db_dir }}
-{% else %}
+LimitNOFILE={{ prometheus_limit_nofile | default('65000') }}
+LimitMEMLOCK=infinity
 ReadWriteDirectories={{ prometheus_db_dir }}
-{% endif %}
-{% if prometheus_systemd_version | int >= 232 %}
-PrivateUsers=true
-ProtectControlGroups=true
-ProtectKernelModules=true
-ProtectKernelTunables=true
-ProtectSystem=strict
-{% else %}
-ProtectSystem=full
 {% endif %}
 {% if http_proxy is defined %}
 Environment="HTTP_PROXY={{ http_proxy }}""
 {% endif %}
 {% if https_proxy is defined %}
-Environment="HTTPS_PROXY={{ https_proxy }}"
+Environment="HTTPS_PROXY={{ http_proxy }}"
 {% endif %}
 
 SyslogIdentifier=prometheus

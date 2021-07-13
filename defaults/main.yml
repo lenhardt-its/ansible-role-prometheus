@@ -1,7 +1,6 @@
 ---
 proxy_env: {}
-prometheus_allow_firewall: false
-prometheus_version: 2.25.2
+prometheus_version: 2.28.1
 prometheus_config_dir: /etc/prometheus
 prometheus_config_file: config.yml
 prometheus_db_dir: /var/lib/prometheus
@@ -13,6 +12,7 @@ prometheus_system_user: "{{ prometheus_user | default('prometheus') }}"
 prometheus_system_group: "{{ prometheus_group | default('prometheus') }}"
 prometheus_log_level: warn
 prometheus_log_format: json
+prometheus_limit_nofile: 65000
 prometheus_create_consul_agent_service: true
 prometheus_storage_retention_time: "7d"
 
