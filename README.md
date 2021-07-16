@@ -25,7 +25,7 @@ All variables which can be overridden are stored in [defaults/main.yml](defaults
 | Name           | Default Value | Description                        |
 | -------------- | ------------- | -----------------------------------|
 | `proxy_env` | {} | Proxy environment variables |
-| `prometheus_version` | 2.13.1 | Prometheus package version. Also accepts `latest` as parameter. Only prometheus 2.x is supported |
+| `prometheus_version` | 2.28.1 | Prometheus package version. Also accepts `latest` as parameter. Only prometheus 2.x is supported |
 | `prometheus_config_file` | "{{ prometheus_config_dir }}/config.yml" | Path to directory with prometheus configuration file|
 | `prometheus_config_dir` | /etc/prometheus | Path to directory with prometheus configuration |
 | `prometheus_db_dir` | /var/lib/prometheus | Path to directory with prometheus database |
@@ -50,8 +50,9 @@ All variables which can be overridden are stored in [defaults/main.yml](defaults
 | `prometheus_scrape_configs` | [defaults/main.yml#L58](defaults/main.yml#L58) | Prometheus scrape jobs provided in same format as in [official docs](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) |
 | `prometheus_config_file` | "prometheus.yml.j2" | Variable used to provide custom prometheus configuration file in form of ansible template |
 | `prometheus_alert_rules_files` | [defaults/main.yml#L79](defaults/main.yml#L79) | List of folders were ansible will look for files containing alerting rules which will be copied to `{{ prometheus_config_dir }}/rules/`. Files must have `*.rules` extension |
+| `prometheus_alert_rules` | [) | Define Alertrules in a ansible-managed file and not in seperate files |
 | `prometheus_targets` | [defaults/main.yml#L61](defaults/main.yml) | List of folders were ansible will look for files containing custom static target configuration files which will be copied to `{{ prometheus_config_dir }}/file_sd/`. |
-| `prometheus_alertrules_files` | [defaults/main.yml#L82](defaults/main.yml#L82) | list of alert rule files stored in files folder |
+| `prometheus_webconfig` | [] | Define Prometheus Webconfig |
 
 
 ### Relation between `prometheus_scrape_configs` and `prometheus_targets`

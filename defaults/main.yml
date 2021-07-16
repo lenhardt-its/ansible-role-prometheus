@@ -97,4 +97,6 @@ prometheus_alertrules_files:
   - squid_exporter.yml
   - vmware_exporter.yml
 
-prometheus_alert_rules: []
+prometheus_alertrules: []
+
+prometheus_webconfig: []

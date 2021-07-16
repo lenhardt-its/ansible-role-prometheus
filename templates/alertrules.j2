@@ -1,5 +1,0 @@
-{{ ansible_managed | comment }}
-groups:
-- name: {{ item.name }}
-  rules:
-  {{ item.rules | to_nice_yaml(indent=2) | indent(2,False) }}

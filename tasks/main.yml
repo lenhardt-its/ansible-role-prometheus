@@ -108,19 +108,34 @@
   tags: prometheus
   when: (not __prometheus_is_installed.stat.exists) or (__prometheus_current_version_output.stdout_lines[0].split(" ")[2] != prometheus_version)
 
-- name: copy alert rules files
+- name: copy defined alertrules
+  template:
+    src: "alertrules.yml.j2"
+    dest: "{{ prometheus_config_dir }}/rules/ansible_managed.yml"
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0644
+    validate: "{{ prometheus_binary_install_dir }}/promtool check rules %s"
+  when: prometheus_alertrules != []
+  notify: reload prometheus
+  tags:
+    - prometheus
+    - alertrules
+
+- name: copy alertrule files
   copy:
     src: "{{ item }}"
     dest: "{{ prometheus_config_dir }}/rules/{{ item }}"
     mode: 0644
     owner: "{{ prometheus_system_user }}"
     group: "{{ prometheus_system_group }}"
+    validate: "{{ prometheus_binary_install_dir }}/promtool check rules %s"
   with_items: "{{ prometheus_alertrules_files }}"
   notify: reload prometheus
   become: true
   tags: 
     - prometheus
-    - alertfiles
+    - alertrules
 
 - name: configure
   template:
@@ -129,9 +144,24 @@
     force: true
     owner: "{{ prometheus_system_user }}"
     group: "{{ prometheus_system_group }}"
-    mode: 0640
+    mode: 0644
     validate: "{{ prometheus_binary_install_dir }}/promtool check config %s"
   notify: reload prometheus
+  become: true
+  tags: 
+    - prometheus
+    - prometheus_config
+
+- name: configure web
+  copy:
+    content: "{{ prometheus_webconfig | to_nice_yaml(indent=2) }}"
+    dest: "{{ prometheus_config_dir }}/web.yml"
+    force: true
+    owner: "{{ prometheus_system_user }}"
+    group: "{{ prometheus_system_group }}"
+    mode: 0644
+  notify: reload prometheus
+  when: prometheus_webconfig | length > 0
   become: true
   tags: 
     - prometheus
@@ -160,7 +190,7 @@
     force: true
     owner: "{{ prometheus_system_user }}"
     group: "{{ prometheus_system_group }}"
-    mode: 0640
+    mode: 0644
   with_fileglob: "{{ prometheus_static_targets_files }}"
   become: true
   tags: prometheus
