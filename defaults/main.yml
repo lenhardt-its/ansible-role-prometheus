@@ -99,4 +99,4 @@ prometheus_alertrules_files:
 
 prometheus_alertrules: []
 
-prometheus_webconfig: []
+prometheus_webconfig: {}

@@ -18,7 +18,7 @@ ExecStart={{ prometheus_binary_install_dir }}/prometheus \
   --web.console.templates={{ prometheus_config_dir }}/consoles \
   --web.listen-address={{ prometheus_web_listen_address }}:{{ prometheus_web_listen_port }} \
   --web.external-url={{ prometheus_web_external_url }} \
-{% if prometheus_webconfig is defined and prometheus_webconfig | length > 0 %}
+{% if prometheus_webconfig | length > 0 %}
   --web.config.file={{ prometheus_config_dir }}/web.yml \
 {% endif %}
   --log.level={{ prometheus_log_level }} \
@@ -28,11 +28,10 @@ ExecStart={{ prometheus_binary_install_dir }}/prometheus \
 LimitNOFILE={{ prometheus_limit_nofile | default('65000') }}
 LimitMEMLOCK=infinity
 ReadWriteDirectories={{ prometheus_db_dir }}
-{% endif %}
 {% if http_proxy is defined %}
 Environment="HTTP_PROXY={{ http_proxy }}""
 {% endif %}
-{% if https_proxy is defined %}
+{% if http_proxy is defined %}
 Environment="HTTPS_PROXY={{ http_proxy }}"
 {% endif %}
 
