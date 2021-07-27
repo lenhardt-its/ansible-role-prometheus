@@ -2,7 +2,7 @@ groups:
 - name: Pushgateway
   rules:
   - alert: PushgatewayDown
-    expr: up{job="pushgateway"} != 0
+    expr: up{job="pushgateway"} != 1
     for: 10m
     labels:
       severity: page

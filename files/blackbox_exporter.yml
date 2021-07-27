@@ -10,7 +10,7 @@ groups:
       summary: "Endpunkt Check failed (instance {{ $labels.instance }})"
       description: "Endpunkt Check failed\n  VALUE = {{ $value }}"
   - alert: EndpunktCheckSlow
-    expr: avg_over_time(probe_duration_seconds[1m]) > 5
+    expr: avg_over_time(probe_duration_seconds[3m]) > 5
     for: 5m
     labels:
       severity: error
@@ -34,7 +34,7 @@ groups:
       summary: "Blackbox SSL certificate will expire soon (instance {{ $labels.instance }})"
       description: "SSL certificate expires in 3 days\n  VALUE = {{ $value }}"
   - alert: SslCertificateExpired
-    expr: probe_ssl_earliest_cert_expiry - time()  <= 0
+    expr: probe_ssl_earliest_cert_expiry - time() <= 0
     for: 5m
     labels:
       severity: error
@@ -42,7 +42,7 @@ groups:
       summary: "SSL certificate expired (instance {{ $labels.instance }})"
       description: "SSL certificate has expired already\n  VALUE = {{ $value }}"
   - alert: HttpSlowRequests
-    expr: avg_over_time(probe_http_duration_seconds[1m]) > 1
+    expr: avg_over_time(probe_http_duration_seconds[3m]) > 5
     for: 60m
     labels:
       severity: error
@@ -50,10 +50,18 @@ groups:
       summary: "HTTP slow requests (instance {{ $labels.instance }})"
       description: "HTTP request took more than 1s\n  VALUE = {{ $value }}"
   - alert: SlowPing
-    expr: avg_over_time(probe_icmp_duration_seconds[1m]) > 3
+    expr: avg_over_time(probe_icmp_duration_seconds[3m]) > 5
     for: 60m
     labels:
       severity: error
     annotations:
       summary: "Slow ping (instance {{ $labels.instance }})"
       description: "Blackbox ping took more than VALUE = {{ $value }}"
+  - alert: StatusCode
+    expr: "probe_http_status_code <= 199 OR probe_http_status_code >= 400"
+    for: 5m
+    labels:
+      severity: error
+    annotations:
+      summary: "Status Code (instance {{ $labels.instance }})"
+      description: "HTTP status code is not 200-399\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
