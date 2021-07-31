@@ -17,7 +17,6 @@ groups:
     annotations:
       summary: "Prometheus target missing (instance {{ $labels.instance }})"
       description: "A Prometheus target has disappeared. An exporter might be crashed."
-      scc_info: "Ein Dienst ist nicht mehr erreichbar (Timeout)"
   - alert: PrometheusAllTargetsMissing
     expr: count by (job) (up) == 0
     for: 5m

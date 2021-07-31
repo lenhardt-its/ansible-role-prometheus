@@ -13,7 +13,6 @@ groups:
     expr: 100 - 100 * ((windows_logical_disk_free_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024 ) / (windows_logical_disk_size_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024)) > 95
     for: 5m
     labels:
-      scc: yes
       severity: critical
     annotations:
       summary: "Windows Server disk Space Usage (instance {{ $labels.instance }})"
@@ -22,7 +21,6 @@ groups:
     expr: 100 - 100 * ((windows_logical_disk_free_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024 ) / (windows_logical_disk_size_bytes{volume!~"V:|X:|Y:|HarddiskVolume.+|P:|Z:"} / 1024 / 1024)) > 90
     for: 5m
     labels:
-      scc: no
       severity: warning
     annotations:
       summary: "Windows Server disk Space Usage (instance {{ $labels.instance }})"
