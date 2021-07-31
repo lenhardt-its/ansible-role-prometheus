@@ -7,132 +7,132 @@ groups:
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Out of memory (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Out of memory (instance {{ $labels.instance }})"
+        description: "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: UnusualNetworkThroughputIn
       expr: "sum by (instance) (irate(node_network_receive_bytes_total[2m])) / 1024 / 1024 > 100"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Unusual network throughput in (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Host network interfaces are probably receiving too much data (> 100 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Unusual network throughput in (instance {{ $labels.instance }})"
+        description: "Host network interfaces are probably receiving too much data (> 100 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: UnusualNetworkThroughputOut
       expr: "sum by (instance) (irate(node_network_transmit_bytes_total[2m])) / 1024 / 1024 > 100"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Unusual network throughput out (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Host network interfaces are probably sending too much data (> 100 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Unusual network throughput out (instance {{ $labels.instance }})"
+        description: "Host network interfaces are probably sending too much data (> 100 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: UnusualDiskReadRate
       expr: "sum by (instance) (irate(node_disk_read_bytes_total[2m])) / 1024 / 1024 > 50"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Unusual disk read rate (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Disk is probably reading too much data (> 50 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Unusual disk read rate (instance {{ $labels.instance }})"
+        description: "Disk is probably reading too much data (> 50 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: UnusualDiskWriteRate
       expr: "sum by (instance) (irate(node_disk_written_bytes_total[2m])) / 1024 / 1024 > 50"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Unusual disk write rate (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Disk is probably writing too much data (> 50 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Unusual disk write rate (instance {{ $labels.instance }})"
+        description: "Disk is probably writing too much data (> 50 MB/s)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: OutOfDiskSpace
       expr: 'node_filesystem_free_bytes{mountpoint ="/rootfs"} / node_filesystem_size_bytes{mountpoint ="/rootfs"} * 100 < 10'
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Out of disk space (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Out of disk space (instance {{ $labels.instance }})"
+        description: "Disk is almost full (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: OutOfInodes
       expr: 'node_filesystem_files_free{mountpoint ="/rootfs"} / node_filesystem_files{mountpoint ="/rootfs"} * 100 < 10'
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Out of inodes (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Disk is almost running out of available inodes (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Out of inodes (instance {{ $labels.instance }})"
+        description: "Disk is almost running out of available inodes (< 10% left)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: UnusualDiskReadLatency
       expr: "rate(node_disk_read_time_seconds_total[1m]) / rate(node_disk_reads_completed_total[1m]) > 100"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Unusual disk read latency (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Disk latency is growing (read operations > 100ms)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Unusual disk read latency (instance {{ $labels.instance }})"
+        description: "Disk latency is growing (read operations > 100ms)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: UnusualDiskWriteLatency
       expr: "rate(node_disk_write_time_seconds_total[1m]) / rate(node_disk_writes_completed_total[1m]) > 100"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Unusual disk write latency (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Disk latency is growing (write operations > 100ms)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Unusual disk write latency (instance {{ $labels.instance }})"
+        description: "Disk latency is growing (write operations > 100ms)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: HighCpuLoad
       expr: '100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80'
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}High CPU load (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "High CPU load (instance {{ $labels.instance }})"
+        description: "CPU load is > 80%\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: SwapIsFillingUp
       expr: "(1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80"
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}Swap is filling up (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Swap is filling up (>80%)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "Swap is filling up (instance {{ $labels.instance }})"
+        description: "Swap is filling up (>80%)\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: SystemdServiceCrashed
       expr: 'node_systemd_unit_state{state="failed"} == 1'
       for: 5m
       labels:
         severity: warning
       annotations:
-        summary: "{% raw %}SystemD service crashed (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}SystemD service crashed\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
+        summary: "SystemD service crashed (instance {{ $labels.instance }})"
+        description: "SystemD service crashed\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
     - alert: CriticalCPULoad
       expr: '100 - (avg by (instance) (irate(node_cpu_seconds_total{job="node",mode="idle"}[5m])) * 100) > 96'
       for: 2m
       labels:
         severity: critical
       annotations:
-        description: "{% raw %}{{ $labels.instance }} of job {{ $labels.job }} has Critical CPU load for more than 2 minutes.{% endraw %}"
-        summary: "{% raw %}Instance {{ $labels.instance }} - Critical CPU load{% endraw %}"
+        description: "{{ $labels.instance }} of job {{ $labels.job }} has Critical CPU load for more than 2 minutes."
+        summary: "Instance {{ $labels.instance }} - Critical CPU load"
     - alert: CriticalRAMUsage
       expr: '(1 - ((node_memory_MemFree_bytes + node_memory_Buffers_bytes + node_memory_Cached_bytes) / node_memory_MemTotal_bytes)) * 100 > 98'
       for: 5m
       labels:
         severity: critical
       annotations:
-        description: "{% raw %}{{ $labels.instance }} has Critical Memory Usage more than 5 minutes.{% endraw %}"
-        summary: "{% raw %}Instance {{ $labels.instance }} has Critical Memory Usage{% endraw %}"
+        description: "{{ $labels.instance }} has Critical Memory Usage more than 5 minutes."
+        summary: "Instance {{ $labels.instance }} has Critical Memory Usage"
     - alert: CriticalDiskSpace
       expr: 'node_filesystem_free_bytes{mountpoint!~"^/run(/.*|$)",fstype!~"(squashfs|fuse.*)",job="node"} / node_filesystem_size_bytes{job="node"} < 0.1'
       for: 4m
       labels:
         severity: critical
       annotations:
-        description: "{% raw %}{{ $labels.instance }} of job {{ $labels.job }} has less than 10% space remaining.{% endraw %}"
-        summary: "{% raw %}Instance {{ $labels.instance }} - Critical disk space usage{% endraw %}"
+        description: "{{ $labels.instance }} of job {{ $labels.job }} has less than 10% space remaining."
+        summary: "Instance {{ $labels.instance }} - Critical disk space usage"
     - alert: RebootRequired
       expr: "node_reboot_required > 0"
       labels:
         severity: warning
       annotations:
-        description: "{% raw %}{{ $labels.instance }} requires a reboot.{% endraw %}"
-        summary: "{% raw %}Instance {{ $labels.instance }} - reboot required{% endraw %}"
+        description: "{{ $labels.instance }} requires a reboot."
+        summary: "Instance {{ $labels.instance }} - reboot required"
     - alert: ClockSkewDetected
       expr: 'abs(node_timex_offset_seconds) * 1000 > 30'
       for: 2m
       labels:
         severity: warning
       annotations:
-        description: "{% raw %}Clock skew detected on {{ $labels.instance }}. Ensure NTP is configured correctly on this host.{% endraw %}"
-        summary: "{% raw %}Instance {{ $labels.instance }} - Clock skew detected{% endraw %}"
+        description: "Clock skew detected on {{ $labels.instance }}. Ensure NTP is configured correctly on this host."
+        summary: "Instance {{ $labels.instance }} - Clock skew detected"

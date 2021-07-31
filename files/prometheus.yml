@@ -10,7 +10,7 @@ groups:
       summary: "Prometheus configuration reload (instance {{ $labels.hostname }})"
       description: "Prometheus configuration reload error"
   - alert: PrometheusTargetMissing
-    expr: up{managedby!="Treaton"} == 0
+    expr: up == 0
     for: 5m
     labels:
       severity: error
