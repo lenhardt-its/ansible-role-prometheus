@@ -97,39 +97,6 @@ groups:
       annotations:
         summary: "{% raw %}SystemD service crashed (instance {{ $labels.instance }}){% endraw %}"
         description: "{% raw %}SystemD service crashed\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
-
-    - alert: ExporterDown
-      expr: "up == 0"
-      for: 5m
-      labels:
-        severity: warning
-      annotations:
-        summary: "{% raw %}Exporter down (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Prometheus exporter down\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
-    - alert: AlertmanagerConfigurationReload
-      expr: "alertmanager_config_last_reload_successful != 1"
-      for: 5m
-      labels:
-        severity: error
-      annotations:
-        summary: "{% raw %}AlertManager configuration reload (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}AlertManager configuration reload error\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
-    - alert: PrometheusConfigurationReload
-      expr: "prometheus_config_last_reload_successful != 1"
-      for: 5m
-      labels:
-        severity: error
-      annotations:
-        summary: "{% raw %}Prometheus configuration reload (instance {{ $labels.instance }}){% endraw %}"
-        description: "{% raw %}Prometheus configuration reload error\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}{% endraw %}"
-    - alert: InstanceDown
-      expr: "up == 0"
-      for: 5m
-      labels:
-        severity: critical
-      annotations:
-        description: "{% raw %}{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes.{% endraw %}"
-        summary: "{% raw %}Instance {{ $labels.instance }} down{% endraw %}"
     - alert: CriticalCPULoad
       expr: '100 - (avg by (instance) (irate(node_cpu_seconds_total{job="node",mode="idle"}[5m])) * 100) > 96'
       for: 2m
