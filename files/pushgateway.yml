@@ -9,7 +9,7 @@ groups:
     annotations:
       summary: A Pushgateway is down
   - alert: PushesDelayed
-    expr: time() - push_time_seconds{job="pushgateway"} > 300
+    expr: time() - push_time_seconds{job="pushgateway"} > 1800
     for: 5m
     labels:
       severity: critical
