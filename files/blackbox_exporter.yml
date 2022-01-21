@@ -1,14 +1,6 @@
 groups:
 - name: blackbox_exporter
   rules:
-  - alert: EndpunktCheckFailed
-    expr: probe_success == 0
-    for: 5m
-    labels:
-      severity: error
-    annotations:
-      summary: "Endpunkt Check failed (instance {{ $labels.instance }})"
-      description: "Endpunkt Check failed\n  VALUE = {{ $value }}"
   - alert: EndpunktCheckSlow
     expr: avg_over_time(probe_duration_seconds[3m]) > 15
     for: 5m
@@ -57,11 +49,11 @@ groups:
     annotations:
       summary: "Slow ping (instance {{ $labels.instance }})"
       description: "Blackbox ping took more than VALUE = {{ $value }}"
-  - alert: StatusCode
-    expr: "probe_http_status_code <= 199 OR probe_http_status_code >= 400"
+  - alert: EntpointCheck
+    expr: "probe_http_status_code <= 199 OR probe_http_status_code >= 400 OR probe_success == 0"
     for: 5m
     labels:
       severity: error
     annotations:
       summary: "Status Code (instance {{ $labels.instance }})"
-      description: "HTTP status code is not 200-399\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}"
+      description: "HTTP status code for {{ $labels.instance }} is not 200-399 or Endpoint is down - VALUE = {{ $value }}"
